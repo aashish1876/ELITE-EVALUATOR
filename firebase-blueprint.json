@@ -1,0 +1,135 @@
+{
+  "entities": {
+    "user": {
+      "title": "User Profile",
+      "description": "Core profile for the authenticated developer containing Google OAuth details.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Unique Google user ID"
+        },
+        "email": {
+          "type": "string",
+          "description": "Primary Google email address"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Google display name"
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Google profile photo URL"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last updated timestamp"
+        }
+      },
+      "required": ["uid", "email"]
+    },
+    "evaluation": {
+      "title": "Evaluation Result",
+      "description": "A synthesized developer panel report including scores, developer profile details, and full report markdown text.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Evaluation unique ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner userId who requested this evaluation"
+        },
+        "repoUrl": {
+          "type": "string",
+          "description": "Repository URL or project name evaluated"
+        },
+        "commitSha": {
+          "type": "string",
+          "description": "Commit SHA of evaluated git revision"
+        },
+        "scores": {
+          "type": "object",
+          "description": "Breakdown of the 8 evaluation metrics out of 10"
+        },
+        "finalScore": {
+          "type": "number",
+          "description": "Calculated precise average of the 8 scores"
+        },
+        "skillLevel": {
+          "type": "string",
+          "description": "Synthesized developer skill tier estimate"
+        },
+        "hiringVerdict": {
+          "type": "string",
+          "description": "Synthesized hiring verdict"
+        },
+        "reportText": {
+          "type": "string",
+          "description": "The complete markdown formatted final report"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last updated timestamp"
+        }
+      },
+      "required": ["id", "userId", "createdAt"]
+    },
+    "search": {
+      "title": "Search Log",
+      "description": "A single entry detailing a repository or query searched by the user.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Search log unique ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user ID who searched"
+        },
+        "query": {
+          "type": "string",
+          "description": "The exact repository path or search text entered"
+        },
+        "mode": {
+          "type": "string",
+          "description": "Input mode, manual or git"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of the search execution"
+        }
+      },
+      "required": ["id", "userId", "query", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "user",
+      "description": "Root collection storing authenticated client profiles."
+    },
+    "users/{userId}/evaluations/{evalId}": {
+      "schema": "evaluation",
+      "description": "A subcollection storing historic evaluation reports belonging to a single user."
+    },
+    "users/{userId}/searches/{searchId}": {
+      "schema": "search",
+      "description": "A subcollection tracking search query logs for chronological user search history."
+    }
+  }
+}

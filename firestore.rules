@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net: Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- REUSABLE SECURITY PRIMITIVES ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && (
+        request.auth.token.email_verified == true || 
+        request.auth.token.firebase.sign_in_provider == 'google.com'
+      );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- ENTITY SCHEMA VALIDATIONS (THE BLUEPRINTS) ---
+    function isValidUser(data) {
+      return data.uid is string && data.uid.size() <= 128 && data.uid == request.auth.uid
+          && data.email is string && data.email.size() <= 256
+          && (!data.keys().contains('displayName') || (data.displayName is string && data.displayName.size() <= 256))
+          && (!data.keys().contains('photoURL') || (data.photoURL is string && data.photoURL.size() <= 1024));
+    }
+
+    function isValidEvaluation(data) {
+      return data.id is string && data.id.size() <= 128
+          && data.userId is string && data.userId.size() <= 128 && data.userId == request.auth.uid
+          && (!data.keys().contains('repoUrl') || (data.repoUrl is string && data.repoUrl.size() <= 512))
+          && (!data.keys().contains('commitSha') || (data.commitSha is string && data.commitSha.size() <= 128))
+          && (!data.keys().contains('scores') || data.scores is map)
+          && (!data.keys().contains('finalScore') || (data.finalScore is number || data.finalScore is float))
+          && (!data.keys().contains('skillLevel') || (data.skillLevel is string && data.skillLevel.size() <= 128))
+          && (!data.keys().contains('hiringVerdict') || (data.hiringVerdict is string && data.hiringVerdict.size() <= 128))
+          && (!data.keys().contains('reportText') || (data.reportText is string && data.reportText.size() <= 65536));
+    }
+
+    function isValidSearch(data) {
+      return data.id is string && data.id.size() <= 128
+          && data.userId is string && data.userId.size() <= 128 && data.userId == request.auth.uid
+          && data.query is string && data.query.size() <= 2048
+          && (!data.keys().contains('mode') || (data.mode is string && data.mode.size() <= 64));
+    }
+
+    // --- SECURE PATH ROUTING RULES ---
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isEmailVerified() && isValidUser(incoming()) 
+                    && incoming().createdAt == request.time;
+      allow update: if isOwner(userId) && isEmailVerified() && isValidUser(incoming()) 
+                    && incoming().createdAt == existing().createdAt
+                    && incoming().updatedAt == request.time
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'updatedAt']);
+      allow delete: if false;
+
+      // evaluations subcollection
+      match /evaluations/{evalId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isEmailVerified() && isValidId(evalId) 
+                      && isValidEvaluation(incoming())
+                      && incoming().createdAt == request.time;
+        allow update: if isOwner(userId) && isEmailVerified() && isValidId(evalId) 
+                      && isValidEvaluation(incoming())
+                      && incoming().userId == existing().userId
+                      && incoming().createdAt == existing().createdAt
+                      && incoming().updatedAt == request.time
+                      && incoming().diff(existing()).affectedKeys().hasOnly(['scores', 'finalScore', 'skillLevel', 'hiringVerdict', 'reportText', 'updatedAt']);
+        allow delete: if isOwner(userId) && isEmailVerified() && isValidId(evalId);
+      }
+
+      // searches subcollection
+      match /searches/{searchId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isEmailVerified() && isValidId(searchId) 
+                      && isValidSearch(incoming())
+                      && incoming().createdAt == request.time;
+        allow update: if false; // Log entries are completely immutable
+        allow delete: if isOwner(userId) && isEmailVerified() && isValidId(searchId);
+      }
+    }
+  }
+}
