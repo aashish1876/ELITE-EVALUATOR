@@ -1,5 +1,4 @@
 import express from "express";
-import cors from "cors";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -118,15 +117,12 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Enable CORS with secure origin checks and safe fallback
-  app.use(cors({
-    origin: (origin, callback) => {
-      if (!origin) {
-        // Direct non-browser requests (like native clients, testing, same-origin) are allowed
-        callback(null, true);
-        return;
-      }
-      
+  // Enable Custom Robust CORS Middleware with Verbose Logging
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    const method = req.method;
+
+    if (origin) {
       let isAllowed = false;
       try {
         const u = new URL(origin);
@@ -144,18 +140,26 @@ async function startServer() {
           origin.includes(".run.app");
       }
 
+      console.log(`[CORS Check] Method: ${method}, Origin: ${origin}, IsAllowed: ${isAllowed}`);
+
       if (isAllowed) {
-        callback(null, true);
+        res.setHeader("Access-Control-Allow-Origin", origin);
+        res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
+        res.setHeader("Access-Control-Allow-Credentials", "true");
+        res.setHeader("Access-Control-Max-Age", "86400"); // Cache preflight for 24 hours
       } else {
-        console.warn(`[Firewall Alerts] Blocked Cross-Origin request from unauthorized origin: ${origin}`);
-        callback(null, false); // Safe fallback: instructs cors to reject but doesn't throw a server 500
+        console.warn(`[CORS Blocked] Unauthorized Origin: ${origin} trying to request ${req.path}`);
       }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
-    maxAge: 86400 // Cache preflight for 24 hours
-  }));
+    }
+
+    // Immediately terminate preflight OPTIONS requests with 204 No Content
+    if (method === "OPTIONS") {
+      res.sendStatus(204);
+      return;
+    }
+    next();
+  });
 
   // Web Application Firewall - Defensive HTTP Headers
   app.use((req, res, next) => {
