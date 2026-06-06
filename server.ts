@@ -127,18 +127,28 @@ async function startServer() {
         return;
       }
       
-      const isAllowed = 
-        origin.includes("localhost") || 
-        origin.includes("127.0.0.1") || 
-        origin.endsWith(".vercel.app") || 
-        origin.endsWith(".run.app") ||
-        /^https?:\/\/(localhost(:\d+)?|.*\.vercel\.app|.*\.run\.app)$/.test(origin);
+      let isAllowed = false;
+      try {
+        const u = new URL(origin);
+        const hostname = u.hostname;
+        isAllowed = 
+          hostname === "localhost" || 
+          hostname === "127.0.0.1" || 
+          hostname.endsWith(".vercel.app") || 
+          hostname.endsWith(".run.app");
+      } catch (e) {
+        isAllowed = 
+          origin.includes("localhost") || 
+          origin.includes("127.0.0.1") || 
+          origin.includes(".vercel.app") || 
+          origin.includes(".run.app");
+      }
 
       if (isAllowed) {
         callback(null, true);
       } else {
         console.warn(`[Firewall Alerts] Blocked Cross-Origin request from unauthorized origin: ${origin}`);
-        callback(new Error("Cybersecurity Interdiction: Origin blocked by secure cross-origin resource sharing firewall policy."));
+        callback(null, false); // Safe fallback: instructs cors to reject but doesn't throw a server 500
       }
     },
     credentials: true,
