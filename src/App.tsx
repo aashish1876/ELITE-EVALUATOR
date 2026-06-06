@@ -128,9 +128,13 @@ const safeRequest = async (messages: any, model?: string, forceKeyIndex?: number
   let attempts = 0;
   const maxAttempts = 3;
 
+  const apiBaseUrl = window.location.hostname.includes("vercel.app")
+    ? "https://ais-pre-vjq2xy4bortyhk5xlafn66-693203995870.asia-southeast1.run.app"
+    : "";
+
   while (attempts < maxAttempts) {
     try {
-      const response = await fetch("/api/chat", {
+      const response = await fetch(`${apiBaseUrl}/api/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -854,10 +858,19 @@ export default function App() {
 
   const handleSignIn = async () => {
     try {
+      setError(null);
       await signInWithPopup(auth, googleProvider);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed Google login popup:", err);
-      setError("Failed to sign in. Please verify your browser popup allowances.");
+      const isUnauthorizedDomain = err?.code === 'auth/unauthorized-domain' || 
+                                   (err?.message && err.message.includes('unauthorized-domain'));
+      if (isUnauthorizedDomain) {
+        setError(
+          `Unauthorized Domain: Please add "${window.location.hostname}" to the "Authorized domains" list in your Firebase Console (Authentication > Settings > Authorized domains).`
+        );
+      } else {
+        setError("Failed to sign in. Please verify your browser popup allowances.");
+      }
     }
   };
 

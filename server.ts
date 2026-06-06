@@ -117,6 +117,23 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // Enable CORS
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin) {
+      if (/^https?:\/\/(localhost(:\d+)?|.*\.vercel\.app|.*\.run\.app)$/.test(origin)) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+        res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+        res.setHeader("Access-Control-Allow-Credentials", "true");
+      }
+    }
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+
   // Web Application Firewall - Defensive HTTP Headers
   app.use((req, res, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
@@ -133,7 +150,7 @@ async function startServer() {
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.firebaseapp.com https://apis.google.com https://www.gstatic.com; " +
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
       "font-src 'self' https://fonts.gstatic.com data:; " +
-      "connect-src 'self' https://*.googleapis.com https://*.firebaseapp.com https://api.groq.com https://firebase.googleapis.com wss://*.run.app; " +
+      "connect-src 'self' https://*.googleapis.com https://*.firebaseapp.com https://api.groq.com https://firebase.googleapis.com wss://*.run.app https://elite-evaluator.vercel.app; " +
       "img-src 'self' data: https:; " +
       "frame-ancestors 'self' https://ai.studio https://*.google.com https://*.run.app; " +
       "frame-src 'self' https://*.firebaseapp.com;"
