@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -117,29 +118,34 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Enable CORS
-  app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    if (origin) {
+  // Enable CORS with secure origin checks and safe fallback
+  app.use(cors({
+    origin: (origin, callback) => {
+      if (!origin) {
+        // Direct non-browser requests (like native clients, testing, same-origin) are allowed
+        callback(null, true);
+        return;
+      }
+      
       const isAllowed = 
         origin.includes("localhost") || 
         origin.includes("127.0.0.1") || 
         origin.endsWith(".vercel.app") || 
-        origin.endsWith(".run.app");
+        origin.endsWith(".run.app") ||
+        /^https?:\/\/(localhost(:\d+)?|.*\.vercel\.app|.*\.run\.app)$/.test(origin);
 
       if (isAllowed) {
-        res.setHeader("Access-Control-Allow-Origin", origin);
-        res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
-        res.setHeader("Access-Control-Allow-Credentials", "true");
-        res.setHeader("Access-Control-Max-Age", "86400"); // Cache preflight for 24 hours
+        callback(null, true);
+      } else {
+        console.warn(`[Firewall Alerts] Blocked Cross-Origin request from unauthorized origin: ${origin}`);
+        callback(new Error("Cybersecurity Interdiction: Origin blocked by secure cross-origin resource sharing firewall policy."));
       }
-    }
-    if (req.method === "OPTIONS") {
-      return res.sendStatus(200);
-    }
-    next();
-  });
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+    maxAge: 86400 // Cache preflight for 24 hours
+  }));
 
   // Web Application Firewall - Defensive HTTP Headers
   app.use((req, res, next) => {
