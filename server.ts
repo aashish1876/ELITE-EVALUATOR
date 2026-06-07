@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -117,49 +118,47 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Enable Custom Robust CORS Middleware with Verbose Logging
-  app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    const method = req.method;
+  // Enable Custom Robust CORS Middleware using pre-installed 'cors' library
+  const allowedOrigins = [
+    "https://elite-evaluator.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173"
+  ];
 
-    if (origin) {
-      let isAllowed = false;
-      try {
-        const u = new URL(origin);
-        const hostname = u.hostname;
-        isAllowed = 
-          hostname === "localhost" || 
-          hostname === "127.0.0.1" || 
-          hostname.endsWith(".vercel.app") || 
-          hostname.endsWith(".run.app");
-      } catch (e) {
-        isAllowed = 
-          origin.includes("localhost") || 
-          origin.includes("127.0.0.1") || 
-          origin.includes(".vercel.app") || 
-          origin.includes(".run.app");
+  const corsOptions: cors.CorsOptions = {
+    origin: (origin, callback) => {
+      // Direct same-origin or non-browser requests are allowed
+      if (!origin) {
+        callback(null, true);
+        return;
       }
-
-      console.log(`[CORS Check] Method: ${method}, Origin: ${origin}, IsAllowed: ${isAllowed}`);
+      
+      const isAllowed = 
+        allowedOrigins.includes(origin) ||
+        origin.startsWith("http://localhost:") ||
+        origin.startsWith("http://127.0.0.1:") ||
+        origin.endsWith(".vercel.app") ||
+        origin.endsWith(".run.app") ||
+        /^https?:\/\/(localhost(:\d+)?|.*\.vercel\.app|.*\.run\.app)$/.test(origin);
 
       if (isAllowed) {
-        res.setHeader("Access-Control-Allow-Origin", origin);
-        res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
-        res.setHeader("Access-Control-Allow-Credentials", "true");
-        res.setHeader("Access-Control-Max-Age", "86400"); // Cache preflight for 24 hours
+        callback(null, true);
       } else {
-        console.warn(`[CORS Blocked] Unauthorized Origin: ${origin} trying to request ${req.path}`);
+        console.warn(`[CORS Blocked] Unauthorized Origin: ${origin}`);
+        callback(null, false); // Blocked in standard CORS way, no credentials sent, but doesn't crash server
       }
-    }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+    credentials: true,
+    maxAge: 86400 // Cache preflight for 24 hours
+  };
 
-    // Immediately terminate preflight OPTIONS requests with 204 No Content
-    if (method === "OPTIONS") {
-      res.sendStatus(204);
-      return;
-    }
-    next();
-  });
+  app.use(cors(corsOptions));
+  app.options("*", cors(corsOptions));
 
   // Web Application Firewall - Defensive HTTP Headers
   app.use((req, res, next) => {
