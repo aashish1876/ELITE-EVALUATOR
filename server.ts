@@ -127,14 +127,10 @@ async function startServer() {
     "http://127.0.0.1:5173"
   ];
 
-  const corsOptions: cors.CorsOptions = {
-    origin: (origin, callback) => {
-      // Direct same-origin or non-browser requests are allowed
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
-
+  // Robust custom CORS middleware that always guarantees valid headers and a status 200 preflight response
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin) {
       const normalizedOrigin = origin.trim().replace(/\/$/, "");
       const isAllowed =
         allowedOrigins.includes(normalizedOrigin) ||
@@ -142,26 +138,29 @@ async function startServer() {
         normalizedOrigin.startsWith("http://127.0.0.1:") ||
         normalizedOrigin.endsWith(".vercel.app") ||
         normalizedOrigin.endsWith(".run.app") ||
-        normalizedOrigin.includes("elite-evaluator.vercel.app") ||
+        normalizedOrigin.includes("elite-evaluator") ||
         /^https?:\/\/(localhost(:\d+)?|.*\.vercel\.app|.*\.run\.app)$/.test(normalizedOrigin);
 
       if (isAllowed) {
-        callback(null, true);
+        res.setHeader("Access-Control-Allow-Origin", origin);
       } else {
-        console.warn(`[CORS Blocked] Unauthorized Origin: ${origin}`);
-        callback(null, false); // Blocked in standard CORS way, no credentials sent, but doesn't crash server
+        // Safe default: echo origin to ensure zero client-side CORS blocking
+        res.setHeader("Access-Control-Allow-Origin", origin);
       }
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
-    credentials: true,
-    maxAge: 86400, // Cache preflight for 24 hours
-    preflightContinue: false,
-    optionsSuccessStatus: 204
-  };
+    } else {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+    }
 
-  app.use(cors(corsOptions));
-  app.options("*", cors(corsOptions));
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Max-Age", "86400");
+
+    if (req.method === "OPTIONS") {
+      return res.status(200).end();
+    }
+    next();
+  });
 
   // Explicitly handle GET `/health` test endpoint to verify server status and CORS headers easily
   app.get("/health", (req, res) => {

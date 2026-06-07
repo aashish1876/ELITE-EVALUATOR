@@ -1977,11 +1977,13 @@ ${partialResults.join("\n\n")}`,
                     <div className="relative bg-[#111111] border border-zinc-800 rounded-xl overflow-hidden p-6">
                       <div className="flex flex-col gap-6">
                         <div className="space-y-2">
-                          <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                          <label htmlFor="git-url-input" className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
                             <LinkIcon className="w-3 h-3" /> Repository URL
                           </label>
                           <div className="flex gap-3">
                             <input
+                              id="git-url-input"
+                              name="gitUrl"
                               type="text"
                               value={gitUrl}
                               onChange={(e) => setGitUrl(e.target.value)}
@@ -2006,10 +2008,12 @@ ${partialResults.join("\n\n")}`,
                             className="grid grid-cols-1 md:grid-cols-2 gap-6"
                           >
                             <div className="space-y-2">
-                              <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                              <label htmlFor="branch-select" className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
                                 <GitBranch className="w-3 h-3" /> Branch
                               </label>
                               <select
+                                id="branch-select"
+                                name="branch"
                                 value={selectedBranch}
                                 onChange={(e) => handleBranchChange(e.target.value)}
                                 className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-zinc-300 font-mono text-sm focus:outline-none focus:border-orange-500 transition-colors appearance-none"
@@ -2019,11 +2023,13 @@ ${partialResults.join("\n\n")}`,
                             </div>
 
                             <div className="space-y-2">
-                              <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                              <label htmlFor="commit-select" className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
                                 <GitCommit className="w-3 h-3" /> Specific Commit
                               </label>
                               <div className="relative">
                                 <select
+                                  id="commit-select"
+                                  name="commitSha"
                                   value={selectedCommit?.sha || ''}
                                   onChange={(e) => setSelectedCommit(commits.find(c => c.sha === e.target.value))}
                                   disabled={isFetchingCommits}
@@ -2131,6 +2137,8 @@ ${partialResults.join("\n\n")}`,
                         </div>
                         <div className="flex items-center gap-2">
                           <input
+                            id="file-upload-input"
+                            name="fileUpload"
                             type="file"
                             ref={fileInputRef}
                             onChange={handleFileUpload}
@@ -2143,10 +2151,12 @@ ${partialResults.join("\n\n")}`,
                       {evalMode === 'comparison' ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
                           <div className="space-y-2">
-                            <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                            <label htmlFor="project-a-textarea" className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
                               <FileCode className="w-3 h-3" /> Project A
                             </label>
                             <textarea
+                              id="project-a-textarea"
+                              name="projectCodeA"
                               value={projectInput}
                               onChange={(e) => setProjectInput(e.target.value)}
                               placeholder="Paste Project A code here..."
@@ -2154,10 +2164,12 @@ ${partialResults.join("\n\n")}`,
                             />
                           </div>
                           <div className="space-y-2">
-                            <label className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                            <label htmlFor="project-b-textarea" className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest flex items-center gap-2">
                               <FileCode className="w-3 h-3" /> Project B
                             </label>
                             <textarea
+                              id="project-b-textarea"
+                              name="projectCodeB"
                               value={projectBInput}
                               onChange={(e) => setProjectBInput(e.target.value)}
                               placeholder="Paste Project B code here..."
@@ -2185,11 +2197,13 @@ ${partialResults.join("\n\n")}`,
 
                           <div className="relative flex items-center px-6 py-4">
                             <div className="flex-grow border-t border-zinc-800"></div>
-                            <span className="px-4 text-[10px] font-mono text-zinc-700 uppercase tracking-[0.3em]">OR PASTE CODE</span>
+                            <label htmlFor="project-code-textarea" className="px-4 text-[10px] font-mono text-zinc-700 uppercase tracking-[0.3em] cursor-pointer">OR PASTE CODE</label>
                             <div className="flex-grow border-t border-zinc-800"></div>
                           </div>
 
                           <textarea
+                            id="project-code-textarea"
+                            name="projectCode"
                             value={projectInput}
                             onChange={(e) => setProjectInput(e.target.value)}
                             placeholder="Paste your code, file tree, or project description here..."
