@@ -136,13 +136,15 @@ async function startServer() {
         return;
       }
       
+      const normalizedOrigin = origin.trim().replace(/\/$/, "");
       const isAllowed = 
-        allowedOrigins.includes(origin) ||
-        origin.startsWith("http://localhost:") ||
-        origin.startsWith("http://127.0.0.1:") ||
-        origin.endsWith(".vercel.app") ||
-        origin.endsWith(".run.app") ||
-        /^https?:\/\/(localhost(:\d+)?|.*\.vercel\.app|.*\.run\.app)$/.test(origin);
+        allowedOrigins.includes(normalizedOrigin) ||
+        normalizedOrigin.startsWith("http://localhost:") ||
+        normalizedOrigin.startsWith("http://127.0.0.1:") ||
+        normalizedOrigin.endsWith(".vercel.app") ||
+        normalizedOrigin.endsWith(".run.app") ||
+        normalizedOrigin.includes("elite-evaluator.vercel.app") ||
+        /^https?:\/\/(localhost(:\d+)?|.*\.vercel\.app|.*\.run\.app)$/.test(normalizedOrigin);
 
       if (isAllowed) {
         callback(null, true);
@@ -161,6 +163,23 @@ async function startServer() {
 
   app.use(cors(corsOptions));
   app.options("*", cors(corsOptions));
+
+  // Explicitly handle GET `/health` test endpoint to verify server status and CORS headers easily
+  app.get("/health", (req, res) => {
+    res.status(200).json({
+      status: "ok",
+      timestamp: Date.now()
+    });
+  });
+
+  // Explicitly handle GET `/api/chat` to verify the endpoint is alive without getting a 404 or falling through
+  app.get("/api/chat", (req, res) => {
+    res.status(200).json({
+      status: "alive",
+      message: "The Elite Evaluator Chat API endpoint is active and working. Please submit a POST request to analyze your project.",
+      timestamp: Date.now()
+    });
+  });
 
   // Web Application Firewall - Defensive HTTP Headers
   app.use((req, res, next) => {
