@@ -154,7 +154,9 @@ async function startServer() {
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
     credentials: true,
-    maxAge: 86400 // Cache preflight for 24 hours
+    maxAge: 86400, // Cache preflight for 24 hours
+    preflightContinue: false,
+    optionsSuccessStatus: 204
   };
 
   app.use(cors(corsOptions));
