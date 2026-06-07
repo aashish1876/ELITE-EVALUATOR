@@ -1,6 +1,5 @@
 import express from "express";
 import cors from "cors";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import OpenAI from "openai";
@@ -135,9 +134,9 @@ async function startServer() {
         callback(null, true);
         return;
       }
-      
+
       const normalizedOrigin = origin.trim().replace(/\/$/, "");
-      const isAllowed = 
+      const isAllowed =
         allowedOrigins.includes(normalizedOrigin) ||
         normalizedOrigin.startsWith("http://localhost:") ||
         normalizedOrigin.startsWith("http://127.0.0.1:") ||
@@ -189,7 +188,7 @@ async function startServer() {
     res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
     res.setHeader("X-Download-Options", "noopen");
     res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
-    
+
     // Content Security Policy: Protects scripts/styles while remaining highly compatible with Firebase Auth and Google AI Studio Preview
     res.setHeader(
       "Content-Security-Policy",
@@ -287,7 +286,6 @@ async function startServer() {
           const fallbackModel = "llama-3.1-8b-instant";
           console.warn(`[AI Request Fallback] Model ${selectedModel} failed (${errMessage}). Retrying with high-limit model ${fallbackModel}...`);
           
-          // Introduce a short cooldown pause (e.g. 500ms) to allow rate limit windows to shift/relax
           await new Promise(resolve => setTimeout(resolve, 500));
           
           response = await client.chat.completions.create({
@@ -308,24 +306,33 @@ async function startServer() {
     }
   });
 
-  // Vite middleware for development
+  // Serve Single Page Application (SPA) frontend assets in production; use Vite in development
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
+    // Determine the dist path relative to execution directory via process.cwd()
     const distPath = path.join(process.cwd(), "dist");
+    
+    // Serve static files from compiled dist folder (Vite builds into /dist)
     app.use(express.static(distPath));
+    
+    // Handle fallback routing to index.html for React Router / SPA navigation
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
   });
 }
 
-startServer();
+startServer().catch((error) => {
+  console.error("Critical server startup failure:", error);
+  process.exit(1);
+});
